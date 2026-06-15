@@ -61,6 +61,15 @@ class TitlebarHoverManager {
         guard AXUIElementCopyAttributeValue(axApp, kAXFocusedWindowAttribute as CFString, &winRef) == .success else { return nil }
         let axWin = winRef as! AXUIElement
 
+        // Ignore non-standard windows (popups, floating panels, tooltips)
+        var subroleRef: CFTypeRef?
+        if AXUIElementCopyAttributeValue(axWin, kAXSubroleAttribute as CFString, &subroleRef) == .success,
+           let subrole = subroleRef as? String {
+            guard subrole == kAXStandardWindowSubrole as String else { return nil }
+        } else {
+            return nil
+        }
+
         var posRef: CFTypeRef?
         var sizeRef: CFTypeRef?
         guard AXUIElementCopyAttributeValue(axWin, kAXPositionAttribute as CFString, &posRef) == .success,
@@ -100,11 +109,15 @@ class TitlebarHoverManager {
         let p = LayoutMenuPanel.make(from: menu)
         panel = p
 
-        // Position the panel just below the zoom button, aligned to its left
+        // Position the panel to avoid overlapping with macOS native green button menu (which expands bottom-right)
         let panelSize = p.frame.size
+        var xPos = zoomRect.minX - panelSize.width - 8
+        if xPos < 10 { // if offscreen to the left, put it to the right of the native menu (~220px width for native menu)
+            xPos = zoomRect.maxX + 220
+        }
         let origin = NSPoint(
-            x: zoomRect.minX,
-            y: zoomRect.minY - panelSize.height - 2
+            x: xPos,
+            y: zoomRect.minY - panelSize.height + zoomRect.height
         )
         p.setFrameOrigin(origin)
         p.orderFront(nil)
@@ -164,9 +177,12 @@ class LayoutMenuPanel: NSPanel {
         for item in menu.items where !item.isHidden {
             totalH += item.isSeparatorItem ? 6 : 28
         }
+        let screenH = NSScreen.main?.visibleFrame.height ?? 800
+        let clampedH = min(totalH, screenH - 100)
+        
         let width: CGFloat = 220
         let panel = LayoutMenuPanel(
-            contentRect: NSRect(x: 0, y: 0, width: width, height: totalH),
+            contentRect: NSRect(x: 0, y: 0, width: width, height: clampedH),
             styleMask: [.nonactivatingPanel, .borderless],
             backing: .buffered,
             defer: true
@@ -181,37 +197,52 @@ class LayoutMenuPanel: NSPanel {
     }
 
     private func buildContent(from menu: NSMenu) {
-        let container = NSView(frame: NSRect(origin: .zero, size: frame.size))
+        var totalH: CGFloat = 8
+        for item in menu.items where !item.isHidden {
+            totalH += item.isSeparatorItem ? 6 : 28
+        }
+        
+        let container = NSView(frame: NSRect(x: 0, y: 0, width: frame.width, height: totalH))
 
-        // Blurred background
-        let bg = NSVisualEffectView(frame: container.bounds)
+        // Blurred background for the whole panel
+        let bg = NSVisualEffectView(frame: NSRect(origin: .zero, size: frame.size))
         bg.material = .menu
         bg.blendingMode = .behindWindow
         bg.state = .active
         bg.wantsLayer = true
         bg.layer?.cornerRadius = 8
         bg.layer?.masksToBounds = true
-        container.addSubview(bg)
+        bg.autoresizingMask = [.width, .height]
 
-        // Build rows bottom-up (NSView coordinate: y=0 is bottom)
-        var yOffset: CGFloat = 4  // bottom padding
-        let reversedItems = menu.items.filter { !$0.isHidden }.reversed()
+        // Build rows top-down inside the container (NSView coordinate: y=0 is bottom, so top is totalH)
+        var yOffset: CGFloat = totalH - 4
+        let items = menu.items.filter { !$0.isHidden }
 
-        for item in reversedItems {
+        for item in items {
             if item.isSeparatorItem {
-                let sep = NSBox(frame: NSRect(x: 8, y: yOffset + 1, width: frame.width - 16, height: 1))
+                yOffset -= 6
+                let sep = NSBox(frame: NSRect(x: 8, y: yOffset + 2, width: frame.width - 16, height: 1))
                 sep.boxType = .separator
                 container.addSubview(sep)
-                yOffset += 6
             } else {
+                yOffset -= 28
                 let row = MenuRowButton(frame: NSRect(x: 4, y: yOffset, width: frame.width - 8, height: 26))
                 row.setup(with: item)
                 container.addSubview(row)
-                yOffset += 28
             }
         }
+        
+        let scroll = NSScrollView(frame: NSRect(origin: .zero, size: frame.size))
+        scroll.hasVerticalScroller = true
+        scroll.drawsBackground = false
+        scroll.documentView = container
+        scroll.autoresizingMask = [.width, .height]
 
-        contentView = container
+        let wrapper = NSView(frame: NSRect(origin: .zero, size: frame.size))
+        wrapper.addSubview(bg)
+        wrapper.addSubview(scroll)
+
+        contentView = wrapper
         setupTracking(on: container)
     }
 

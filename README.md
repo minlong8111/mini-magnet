@@ -35,9 +35,9 @@
 ## 📸 Preview
 
 <p align="center">
-  <img src="assets/preview_menubar.png" width="320" alt="Menu Bar"/>
-  &nbsp;&nbsp;&nbsp;
-  <img src="assets/preview_settings.png" width="320" alt="Settings"/>
+  <img src="assets/preview_menubar.png" width="220" alt="Menu Bar"/>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="assets/preview_settings.png" width="400" alt="Settings"/>
 </p>
 
 <p align="center">
@@ -96,7 +96,7 @@ open MiniMagnet.app
 1. macOS will prompt you to grant **Accessibility** permission
 2. Go to **System Settings → Privacy & Security → Accessibility**
 3. Enable **MiniMagnet**
-4. The app will appear in your **menu bar** with a 🧲 magnet icon
+4. The app will appear in your **menu bar** with a 🪟 window icon
 
 ---
 

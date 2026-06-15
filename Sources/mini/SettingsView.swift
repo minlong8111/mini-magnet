@@ -46,7 +46,7 @@ class SettingsStore: ObservableObject {
 
     init() {
         snappingEnabled     = UserDefaults.standard.object(forKey: "snappingEnabled") as? Bool ?? true
-        hoverOverlayEnabled = UserDefaults.standard.object(forKey: "hoverOverlayEnabled") as? Bool ?? true
+        hoverOverlayEnabled = UserDefaults.standard.object(forKey: "hoverOverlayEnabled") as? Bool ?? false
         launchAtLogin       = UserDefaults.standard.object(forKey: "launchAtLogin") as? Bool ?? false
         
         let loadedShortcuts: [String: Shortcut]

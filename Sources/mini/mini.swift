@@ -18,8 +18,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         _ = WindowManager.shared.checkAccessibilityPermissions(prompt: true)
         setupMenuBar()
         setupGlobalHotkeys()
-        SnappingManager.shared.startMonitoring()
-        TitlebarHoverManager.shared.startMonitoring()
+        if SettingsStore.shared.snappingEnabled {
+            SnappingManager.shared.startMonitoring()
+        }
+        if SettingsStore.shared.hoverOverlayEnabled {
+            TitlebarHoverManager.shared.startMonitoring()
+        }
     }
 
     // MARK: - Menu Bar
@@ -38,7 +42,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func makeMenuBarIcon() -> NSImage? {
         // Use the native macOS 'magnet' system symbol for a sleek, pixel-perfect, and system-integrated menu bar icon
         if #available(macOS 11.0, *) {
-            if let img = NSImage(systemSymbolName: "magnet", accessibilityDescription: "Mini Magnet") {
+            if let img = NSImage(systemSymbolName: "uiwindow.split.2x1", accessibilityDescription: "Mini Magnet") ?? NSImage(systemSymbolName: "macwindow", accessibilityDescription: "Mini Magnet") {
                 img.isTemplate = true
                 return img
             }
@@ -126,7 +130,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(.separator())
         let quit = NSMenuItem(title: "Quit Mini Magnet", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         quit.keyEquivalentModifierMask = .command
-        quit.isHidden = true
         menu.addItem(quit)
 
         return menu

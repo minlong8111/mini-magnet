@@ -127,8 +127,15 @@ private func keyCodeToString(_ keyCode: UInt32) -> String? {
     var chars = [UniChar](repeating: 0, count: maxLen)
     var actualLen = 0
     
-    guard let keyboardLayout = TISCopyCurrentKeyboardInputSource()?.takeRetainedValue() else { return nil }
-    let layoutData = TISGetInputSourceProperty(keyboardLayout, kTISPropertyUnicodeKeyLayoutData)
+    var keyboardLayout = TISCopyCurrentKeyboardInputSource()?.takeRetainedValue()
+    var layoutData = keyboardLayout.flatMap { TISGetInputSourceProperty($0, kTISPropertyUnicodeKeyLayoutData) }
+    
+    if layoutData == nil {
+        keyboardLayout = TISCopyCurrentASCIICapableKeyboardLayoutInputSource()?.takeRetainedValue()
+        layoutData = keyboardLayout.flatMap { TISGetInputSourceProperty($0, kTISPropertyUnicodeKeyLayoutData) }
+    }
+    
+    guard let layoutData = layoutData else { return nil }
     
     guard let layoutDataRef = unsafeBitCast(layoutData, to: CFData?.self) else { return nil }
     let rawLayoutData = CFDataGetBytePtr(layoutDataRef)
